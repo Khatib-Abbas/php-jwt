@@ -1,5 +1,5 @@
 <?php
-namespace Firebase\JWT;
+namespace ULB\JWT;
 
 use ArrayObject;
 use PHPUnit\Framework\TestCase;
