@@ -72,7 +72,7 @@ class JWT
      * @uses jsonDecode
      * @uses urlsafeB64Decode
      */
-    public static function decode($jwt, $key, array $allowed_algs = array())
+    public static function decode($jwt, $key, array $allowed_algs = array(),$kid=false)
     {
         $timestamp = \is_null(static::$timestamp) ? \time() : static::$timestamp;
 
@@ -107,7 +107,7 @@ class JWT
             $sig = self::signatureToDER($sig);
         }
 
-        if (\is_array($key) || $key instanceof \ArrayAccess) {
+        if ($kid && \is_array($key) || $key instanceof \ArrayAccess) {
             if (isset($header->kid)) {
                 if (!isset($key[$header->kid])) {
                     throw new UnexpectedValueException('"kid" invalid, unable to lookup correct key');
@@ -158,6 +158,7 @@ class JWT
      *                                  Supported algorithms are 'ES256', 'HS256', 'HS384', 'HS512', 'RS256', 'RS384', and 'RS512'
      * @param mixed         $keyId
      * @param array         $head       An array with header elements to attach
+     * @param array         $head       Verify or not the kid in header
      *
      * @return string A signed JWT
      *
@@ -225,7 +226,7 @@ class JWT
      *
      * @param string            $msg        The original message (header and body)
      * @param string            $signature  The original signature
-     * @param string|resource   $key        For HS*, a string key works. for RS*, must be a resource of an openssl public key
+     * @param string|resource|array   $key        For HS*, a string key works. for RS*, must be a resource of an openssl public key
      * @param string            $alg        The algorithm
      *
      * @return bool
@@ -237,11 +238,11 @@ class JWT
         if (empty(static::$supported_algs[$alg])) {
             throw new DomainException('Algorithm not supported');
         }
-
         list($function, $algorithm) = static::$supported_algs[$alg];
         switch ($function) {
             case 'openssl':
-                $success = \openssl_verify($msg, $signature, $key, $algorithm);
+                $success = \openssl_verify($msg, $signature,  sizeof($key) === 1 ?reset($key):$key, $algorithm);
+
                 if ($success === 1) {
                     return true;
                 } elseif ($success === 0) {
@@ -371,8 +372,8 @@ class JWT
         );
         throw new DomainException(
             isset($messages[$errno])
-            ? $messages[$errno]
-            : 'Unknown JSON error: ' . $errno
+                ? $messages[$errno]
+                : 'Unknown JSON error: ' . $errno
         );
     }
 
